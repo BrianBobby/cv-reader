@@ -78,11 +78,14 @@ public class ResumeController {
 
                 } catch (Exception e) {
 
-                        e.printStackTrace();
+    e.printStackTrace();
 
-                        return ResponseEntity.internalServerError()
-                                        .body(Map.of("error",
-                                                        "An unexpected server error occurred."));
-                }
+    return ResponseEntity.internalServerError()
+            .body(Map.of(
+                    "error", e.getMessage() != null
+                            ? e.getMessage()
+                            : e.getClass().getSimpleName()
+            ));
+}
         }
 }
