@@ -75,27 +75,33 @@ public class ResumeExtractionService {
         List<Map<String, Object>> content = new ArrayList<>();
 
         if (IMAGE_TYPES.containsKey(ext)) {
-            content.add(Map.of("type", "text", "text", prompt));
             content.add(Map.of("type", "image_url",
                     "image_url", Map.of("url", dataUrl(IMAGE_TYPES.get(ext), bytes))));
 
         } else if (TEXT_EXTS.contains(ext)) {
             String text = extractLocalText(bytes, ext);
             content.add(Map.of("type", "text", "text",
-                    prompt + "\n\n--- RESUME TEXT START ---\n" + text + "\n--- RESUME TEXT END ---"));
+                    "Extract candidate information from this resume:\n" + text));
 
         } else {
             String mime = FILE_TYPES.getOrDefault(ext, "application/octet-stream");
             String filename = (originalName == null || originalName.isBlank()) ? "resume" + ext : originalName;
-            content.add(Map.of("type", "text", "text", prompt));
             content.add(Map.of("type", "file",
                     "file", Map.of("filename", filename, "file_data", dataUrl(mime, bytes))));
         }
 
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "system",
+                        "content", prompt),
+                Map.of(
+                        "role", "user",
+                        "content", content));
+
         Map<String, Object> body = Map.of(
                 "model", model,
                 "max_completion_tokens", 4000,
-                "messages", List.of(Map.of("role", "user", "content", content)));
+                "messages", messages);
 
         JsonNode response = restClient.post()
                 .uri("/v1/chat/completions")
@@ -182,7 +188,7 @@ public class ResumeExtractionService {
             });
             return String.join(", ", parts);
         }
-        return cleanText(node.asText());
+        return cleanText(node.asString());
     }
 
     private List<String> toStringArray(JsonNode node) {
