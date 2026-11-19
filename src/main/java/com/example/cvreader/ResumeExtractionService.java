@@ -123,7 +123,7 @@ public class ResumeExtractionService {
             parsed = mapper.readTree(stripToJson(raw));
         } catch (Exception e) {
             throw new ResumeProcessingException(
-                    "AI response did not contain a JSON object.");
+                    "AI response was not valid JSON: " + e.getMessage(), e);
         }
         return normalize(parsed);
     }
@@ -164,7 +164,8 @@ public class ResumeExtractionService {
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');
         if (start == -1 || end == -1 || end < start) {
-            throw new IllegalStateException("AI response did not contain a JSON object.");
+            throw new ResumeProcessingException("AI response did not contain a JSON object. Raw start: "
+                    + rawText.substring(0, Math.min(200, rawText.length())));
         }
         return cleaned.substring(start, end + 1);
     }
