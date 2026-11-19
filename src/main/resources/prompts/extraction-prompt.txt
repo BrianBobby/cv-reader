@@ -73,7 +73,9 @@ PERSONAL INFORMATION RULES:
 - "Contact No": the candidate's phone/mobile number, including country code if present. No spaces or formatting, just the digits and symbols as written.
 - "Address": the candidate's current residential address as stated in the resume, including building/street, area, city, and country where available. Do not infer missing address details.
 - "Current Salary": as written, including currency and period (e.g. "AED 12,000 per month").
-- "UAE Driving License": e.g. "Yes", or "Yes - Manual, Valid till 2027" if details are given.
+- "UAE Driving License":
+  - Return "Yes" if the resume explicitly mentions that the candidate holds a valid UAE driving license.
+  - Return "No" if the resume explicitly states that the candidate does not have a UAE driving license OR if no UAE driving license information is mentioned.
 - "Other Driving License": country and type if stated (e.g. "India - LMV").
 
 QUALIFICATION AND CERTIFICATION RULES:

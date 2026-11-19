@@ -67,64 +67,114 @@ public class ResumeExtractionService {
     }
 
     public Map<String, Object> extractResumeData(byte[] bytes, String originalName) throws Exception {
+
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("OPENAI_API_KEY is not set. Add it to your .env file.");
+            throw new IllegalStateException(
+                    "OPENAI_API_KEY is not set. Add it to your .env file.");
         }
 
         String ext = getExtension(originalName);
+
         List<Map<String, Object>> content = new ArrayList<>();
 
+        // 1. Images
         if (IMAGE_TYPES.containsKey(ext)) {
-            content.add(Map.of("type", "image_url",
-                    "image_url", Map.of("url", dataUrl(IMAGE_TYPES.get(ext), bytes))));
 
+            content.add(Map.of(
+                    "type", "input_image",
+                    "image_url", dataUrl(IMAGE_TYPES.get(ext), bytes)));
+
+            // 2. DOCX and TXT (extract locally)
         } else if (TEXT_EXTS.contains(ext)) {
-            String text = extractLocalText(bytes, ext);
-            content.add(Map.of("type", "text", "text",
-                    "Extract candidate information from this resume:\n" + text));
 
+            String text = extractLocalText(bytes, ext);
+
+            content.add(Map.of(
+                    "type", "input_text",
+                    "text", "Extract candidate information from this resume:\n" + text));
+
+            // 3. PDF and other supported file inputs
         } else {
-            String mime = FILE_TYPES.getOrDefault(ext, "application/octet-stream");
-            String filename = (originalName == null || originalName.isBlank()) ? "resume" + ext : originalName;
-            content.add(Map.of("type", "file",
-                    "file", Map.of("filename", filename, "file_data", dataUrl(mime, bytes))));
+
+            String mime = FILE_TYPES.getOrDefault(
+                    ext, "application/octet-stream");
+
+            String filename = (originalName == null || originalName.isBlank())
+                    ? "resume" + ext
+                    : originalName;
+
+            content.add(Map.of(
+                    "type", "input_file",
+                    "filename", filename,
+                    "file_data", dataUrl(mime, bytes)));
         }
 
-        List<Map<String, Object>> messages = List.of(
-                Map.of(
-                        "role", "system",
-                        "content", prompt),
-                Map.of(
-                        "role", "user",
-                        "content", content));
+        // Responses API request
+        Map<String, Object> inputMessage = Map.of(
+                "role", "user",
+                "content", content);
 
         Map<String, Object> body = Map.of(
                 "model", model,
-                "max_completion_tokens", 4000,
-                "messages", messages);
+                "instructions", prompt,
+                "max_output_tokens", 4000,
+                "input", List.of(inputMessage));
 
+        // Call Responses API
         JsonNode response = restClient.post()
-                .uri("/v1/chat/completions")
+                .uri("/v1/responses")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
                 .body(JsonNode.class);
 
-        String raw = response == null ? ""
-                : response.path("choices").path(0).path("message").path("content").asString("");
+        // Extract generated text from output items
+        StringBuilder outputText = new StringBuilder();
+
+        if (response != null) {
+
+            JsonNode output = response.path("output");
+
+            for (JsonNode item : output) {
+
+                if (!"message".equals(item.path("type").asString(""))) {
+                    continue;
+                }
+
+                JsonNode contents = item.path("content");
+
+                for (JsonNode part : contents) {
+
+                    if ("output_text".equals(
+                            part.path("type").asString(""))) {
+
+                        outputText.append(
+                                part.path("text").asString(""));
+                    }
+                }
+            }
+        }
+
+        String raw = outputText.toString().trim();
+
         if (raw.isBlank()) {
             throw new ResumeProcessingException(
                     "The AI model did not return a text response.");
         }
 
+        // Parse JSON (your existing logic)
         JsonNode parsed;
+
         try {
             parsed = mapper.readTree(stripToJson(raw));
+
         } catch (Exception e) {
+
             throw new ResumeProcessingException(
                     "AI response was not valid JSON: " + e.getMessage(), e);
         }
+
         return normalize(parsed);
     }
 
