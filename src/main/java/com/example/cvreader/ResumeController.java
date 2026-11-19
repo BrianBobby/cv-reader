@@ -33,7 +33,8 @@ public class ResumeController {
 
                 if (file == null || file.isEmpty()) {
                         return error(HttpStatus.BAD_REQUEST, "FILE_MISSING",
-                                        "Attach a file under the \"resume\" field.", null);
+                                        "No file was provided. Please attach the file using the \"resume\" field.",
+                                        null);
                 }
 
                 String ext = ResumeExtractionService.getExtension(file.getOriginalFilename());
