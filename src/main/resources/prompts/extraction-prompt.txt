@@ -65,7 +65,7 @@ GENERAL RULES:
 - If an array field has nothing, use [].
 - If no work experience is found, use "Experiences": [].
 - Never invent information, and never write "null", "N/A", or "not found".
-- Never infer or guess: Gender, Marital Status, Date of Birth, Nationality, Passport No, Visa Status, Visa Expiry, Notice Period, Current Salary, Driving Licenses, Mother Tongue, Reason for leaving, or Salary. Fill these only if explicitly stated.
+- Never infer or guess: Gender, Marital Status, Date of Birth, Nationality, Passport No, Visa Status, Visa Expiry, Notice Period, Current Salary, Driving Licenses, Reason for leaving, or Salary. Fill these only if explicitly stated.
 
 PERSONAL INFORMATION RULES:
 - "First Name", "Middle Name", "Last Name": split the candidate's full name. Leave Middle Name "" if there is none.
@@ -185,6 +185,7 @@ LANGUAGE RULES:
 - If only English is marked "Native", select English.
 - Never infer Mother Tongue from languages marked Fluent, Advanced, Intermediate or Basic.
 - If no language is marked Native and Mother Tongue is not explicitly stated, return "".
+- Never infer Mother Tongue based on nationality, name, ethnicity or country of residence.
 
 FINAL INSTRUCTIONS:
 - Carefully inspect the entire resume before extracting information.

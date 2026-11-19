@@ -33,7 +33,7 @@ public class ResumeController {
 
                 if (file == null || file.isEmpty()) {
                         return error(HttpStatus.BAD_REQUEST, "FILE_MISSING",
-                                        "No file was provided. Please attach the file using the \"resume\" field.",
+                                        "No file was provided. Attach the file using the \"resume\" field.",
                                         null);
                 }
 
