@@ -22,9 +22,11 @@ public class ResumeController {
                         ".png", ".gif", ".webp", ".txt");
 
         private final ResumeExtractionService service;
+        private final LookupMatchService lookupService;
 
-        public ResumeController(ResumeExtractionService service) {
+        public ResumeController(ResumeExtractionService service, LookupMatchService lookupService) {
                 this.service = service;
+                this.lookupService = lookupService;
         }
 
         @PostMapping("/parse-resume")
@@ -46,38 +48,73 @@ public class ResumeController {
                 try {
                         return ResponseEntity.ok(
                                         service.extractResumeData(file.getBytes(), file.getOriginalFilename()));
+                } catch (Exception e) {
+                        return handleException(e);
+                }
+        }
 
-                } catch (ResumeProcessingException e) {
+        @PostMapping("/match-code")
+        public ResponseEntity<?> matchCode(
+                        @RequestParam(value = "cvJson", required = false) MultipartFile cvJson,
+                        @RequestParam(value = "lookup", required = false) MultipartFile lookup,
+                        @RequestParam(value = "title", required = false) String title) {
+
+                if (cvJson == null || cvJson.isEmpty()) {
+                        return error(HttpStatus.BAD_REQUEST, "FILE_MISSING",
+                                        "Attach the resume JSON file using the \"cvJson\" field.", null);
+                }
+                if (lookup == null || lookup.isEmpty()) {
+                        return error(HttpStatus.BAD_REQUEST, "FILE_MISSING",
+                                        "Attach the lookup CSV (CODE,DESCRIPTION, no header) using the \"lookup\" field.",
+                                        null);
+                }
+                if (title == null || title.isBlank()) {
+                        return error(HttpStatus.BAD_REQUEST, "TITLE_MISSING",
+                                        "The \"title\" field is required.", null);
+                }
+
+                try {
+                        return ResponseEntity.ok(lookupService.match(
+                                        cvJson.getBytes(), title.trim(), lookup.getBytes()));
+                } catch (Exception e) {
+                        return handleException(e);
+                }
+        }
+
+        // ---------- shared error handling ----------
+
+        private ResponseEntity<?> handleException(Exception e) {
+                if (e instanceof IllegalArgumentException) {
+                        return error(HttpStatus.BAD_REQUEST, "INVALID_INPUT", e.getMessage(), null);
+
+                } else if (e instanceof ResumeProcessingException) {
                         e.printStackTrace();
                         return error(HttpStatus.UNPROCESSABLE_CONTENT, "RESUME_PROCESSING_ERROR",
                                         e.getMessage(), rootCause(e));
 
-                } catch (HttpClientErrorException e) {
-                        String body = e.getResponseBodyAsString();
-                        System.err.println("OpenAI status: " + e.getStatusCode());
+                } else if (e instanceof HttpClientErrorException ce) {
+                        String body = ce.getResponseBodyAsString();
+                        System.err.println("OpenAI status: " + ce.getStatusCode());
                         System.err.println("OpenAI error: " + body);
-                        return error(HttpStatus.valueOf(e.getStatusCode().value()), "OPENAI_CLIENT_ERROR",
-                                        "OpenAI rejected the request (" + e.getStatusCode().value() + ").", body);
+                        return error(HttpStatus.valueOf(ce.getStatusCode().value()), "OPENAI_CLIENT_ERROR",
+                                        "OpenAI rejected the request (" + ce.getStatusCode().value() + ").", body);
 
-                } catch (HttpServerErrorException e) {
-                        String body = e.getResponseBodyAsString();
+                } else if (e instanceof HttpServerErrorException se) {
+                        String body = se.getResponseBodyAsString();
                         System.err.println("OpenAI server error: " + body);
                         return error(HttpStatus.SERVICE_UNAVAILABLE, "OPENAI_SERVER_ERROR",
-                                        "OpenAI had a server error (" + e.getStatusCode().value() + ").", body);
+                                        "OpenAI had a server error (" + se.getStatusCode().value() + ").", body);
 
-                } catch (ResourceAccessException e) {
+                } else if (e instanceof ResourceAccessException) {
                         e.printStackTrace();
                         return error(HttpStatus.SERVICE_UNAVAILABLE, "OPENAI_CONNECTION_ERROR",
                                         "Could not connect to OpenAI.", rootCause(e));
-
-                } catch (Exception e) {
-
-                        e.printStackTrace();
-                        return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR",
-                                        e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName(),
-                                        e.getClass().getName() + ": " + rootCause(e));
                 }
 
+                e.printStackTrace();
+                return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR",
+                                e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName(),
+                                e.getClass().getName() + ": " + rootCause(e));
         }
 
         private static String rootCause(Throwable e) {
@@ -87,7 +124,7 @@ public class ResumeController {
 
         private static ResponseEntity<Map<String, Object>> error(
                         HttpStatus status, String code, String message, String details) {
-                Map<String, Object> body = new LinkedHashMap<>(); // allows null-free optional fields
+                Map<String, Object> body = new LinkedHashMap<>();
                 body.put("success", false);
                 body.put("error", code);
                 body.put("message", message);

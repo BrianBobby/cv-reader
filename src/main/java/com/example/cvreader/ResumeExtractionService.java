@@ -30,21 +30,48 @@ public class ResumeExtractionService {
             ".pdf", "application/pdf", ".doc", "application/msword");
 
     private static final List<String> FIELDS = List.of(
-            "First Name", "Middle Name", "Last Name", "Gender", "Marital Status",
-            "Date of Birth", "Nationality", "Passport No", "Visa Status", "Visa Expiry",
-            "Notice Period", "Contact No", "Address", "Email", "Current Salary",
-            "UAE Driving License", "Other Driving License", "Highest Qualification",
-            "Other Qualification", "Certifications", "Years of Experience",
-            "Computer Skills", "Technical Skills", "Sector", "Keywords",
-            "Experiences", "Language", "Mother Tongue");
+            "First Name",
+            "Middle Name",
+            "Last Name",
+            "Gender",
+            "Marital Status",
+            "Date of Birth",
+            "Nationality",
+            "Passport No",
+            "Visa Status",
+            "Visa Expiry",
+            "Notice Period",
+            "Contact No",
+            "Address",
+            "Email",
+            "Current Salary",
+            "UAE Driving License",
+            "Other Driving License",
+            "Highest Qualification",
+            "Other Qualification",
+            "Certifications",
+            "Years of Experience",
+            "Designation",
+            "Computer Skills",
+            "Technical Skills",
+            "Sector",
+            "Keywords",
+            "Experiences",
+            "Language",
+            "Mother Tongue");
 
     private static final Set<String> ARRAY_FIELDS = Set.of(
             "Certifications", "Computer Skills", "Other Qualification",
             "Technical Skills", "Keywords", "Language");
 
     private static final List<String> EXPERIENCE_FIELDS = List.of(
-            "Company Name", "Date of join", "Position",
-            "Responsibilities", "Reason for leaving", "Salary");
+            "Company Name",
+            "Start Date",
+            "End Date",
+            "Position",
+            "Responsibilities",
+            "Reason for leaving",
+            "Salary");
 
     private static final Pattern EMPTY_VALUES = Pattern.compile("^(null|n/a|na|not found|none|unknown)$",
             Pattern.CASE_INSENSITIVE);
@@ -116,8 +143,9 @@ public class ResumeExtractionService {
 
         Map<String, Object> body = Map.of(
                 "model", model,
+                "service_tier", "fast",
                 "instructions", prompt,
-                "max_output_tokens", 4000,
+                "max_output_tokens", 6000,
                 "input", List.of(inputMessage));
 
         // Call Responses API
